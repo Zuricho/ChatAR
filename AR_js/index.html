@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
+    <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
+    <style>
+        body { margin: 0; overflow: hidden; }
+        #captureBtn {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 12px 24px;
+            background: #2196F3;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            z-index: 10000;
+        }
+        #recordBtn {
+            position: fixed;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 12px 24px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            z-index: 10000;
+        }
+    </style>
+</head>
+<body>
+    <a-scene
+        embedded
+        arjs
+        renderer="preserveDrawingBuffer: true;"
+    >
+        <a-marker preset="hiro">
+            <a-entity
+                position="0 0 -1.5"
+                scale="0.1 0.1 0.1"
+                gltf-model="./mousemodel2/scene.gltf">
+            </a-entity>
+            <a-text id="dynamic-text"
+                    position="-2 1 -1.5"
+                    scale="1 2 2"
+                    color="#FF0000">
+            </a-text>
+        </a-marker>
+        <a-entity camera></a-entity>
+    </a-scene>
+
+    <button id="captureBtn">Capture</button>
+    <button id="recordBtn">Start Recording</button>
+
+    <script>
+        // Original capture functionality
+        document.getElementById('captureBtn').addEventListener('click', () => {
+            const scene = document.querySelector('a-scene');
+            const renderer = scene.renderer;
+
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+
+            canvas.width = renderer.domElement.width;
+            canvas.height = renderer.domElement.height;
+
+            ctx.drawImage(renderer.domElement, 0, 0);
+
+            const arVideo = document.querySelector('video');
+            if (arVideo) {
+                ctx.globalCompositeOperation = 'source-over';
+                ctx.drawImage(arVideo, 0, 0, canvas.width, canvas.height);
+            }
+
+            canvas.toBlob(blob => {
+                const link = document.createElement('a');
+                link.download = 'output.jpg';
+                link.href = URL.createObjectURL(blob);
+                link.click();
+                URL.revokeObjectURL(link.href);
+            }, 'image/jpeg', 0.9);
+        });
+
+        // Audio recording functionality
+        const recordBtn = document.getElementById('recordBtn');
+        let mediaRecorder;
+        let audioChunks = [];
+        let isRecording = false;
+
+        navigator.mediaDevices.getUserMedia({ audio: true })
+            .then(stream => {
+                mediaRecorder = new MediaRecorder(stream);
+
+                mediaRecorder.ondataavailable = event => {
+                    audioChunks.push(event.data);
+                };
+
+                mediaRecorder.onstop = () => {
+                    const audioBlob = new Blob(audioChunks, { type: mediaRecorder.mimeType });
+                    const audioUrl = URL.createObjectURL(audioBlob);
+
+                    const a = document.createElement('a');
+                    a.href = audioUrl;
+                    a.download = 'output.webm';
+                    a.click();
+
+                    audioChunks = [];
+                };
+            })
+            .catch(err => {
+                recordBtn.disabled = true;
+                console.error('Microphone access error:', err);
+            });
+
+        recordBtn.addEventListener('click', () => {
+            if (!isRecording) {
+                mediaRecorder.start();
+                recordBtn.textContent = 'Recording... Click to Stop';
+                recordBtn.style.background = '#f44336';
+                isRecording = true;
+            } else {
+                mediaRecorder.stop();
+                recordBtn.textContent = 'Start Recording';
+                recordBtn.style.background = '#4CAF50';
+                isRecording = false;
+            }
+        });
+
+        // Text loading functionality
+        fetch('input2web/input2web.txt')
+            .then(response => response.text())
+            .then(text => {
+                document.getElementById('dynamic-text').setAttribute('value', text.trim());
+            })
+            .catch(error => {
+                console.error('Text load error:', error);
+                document.getElementById('dynamic-text').setAttribute('value', 'Text file not found');
+            });
+    </script>
+</body>
+</html>
