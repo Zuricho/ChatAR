@@ -1,5 +1,5 @@
 # ChatAR: AR Camera Can Now Hear, Talk, and Think
-CUHK EE ELEG5757 Course Group 17 Project
+CUHK EE ELEG5757 Course Group 17 Project.
 
 ## Requirements
 
